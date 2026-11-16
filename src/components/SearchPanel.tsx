@@ -22,6 +22,39 @@ export function SearchPanel({
         <span className="pill">15m / 4h</span>
       </div>
       <fieldset disabled={disabled}>
+        <div className="market-scope" role="group" aria-label="탐색시장">
+          <span className="scope-label">탐색시장</span>
+          <div className="scope-choices">
+            {(
+              [
+                ['COIN', '코인만'],
+                ['STOCK', '주식만'],
+                ['ALL', '전체'],
+              ] as const
+            ).map(([value, label]) => (
+              <label
+                key={value}
+                className={`scope-choice ${s.marketScope === value ? 'selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="market-scope"
+                  value={value}
+                  checked={s.marketScope === value}
+                  onChange={() => update('marketScope', value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <p className="small muted">
+            {s.marketScope === 'COIN'
+              ? 'Bybit 코인 무기한 상품만 탐색합니다.'
+              : s.marketScope === 'STOCK'
+                ? 'Bybit 주식·ETF 무기한 상품만 탐색합니다.'
+                : 'Bybit 코인 + 주식·ETF 무기한 상품을 함께 탐색합니다.'}
+          </p>
+        </div>
         <div className="fields">
           <label>
             방향
@@ -107,6 +140,7 @@ export function SearchPanel({
           <label>
             <input
               type="checkbox"
+              disabled={s.marketScope === 'STOCK'}
               checked={s.includeETH}
               onChange={(e) => update('includeETH', e.target.checked)}
             />

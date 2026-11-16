@@ -22,6 +22,9 @@ function load(): Settings {
           .filter((k) => typeof s[k] === typeof defaults[k as keyof Settings])
           .map((k) => [k, s[k]]),
       ),
+      marketScope: ['COIN', 'STOCK', 'ALL'].includes(s.marketScope)
+        ? s.marketScope
+        : 'COIN',
       turnover: [5e6, 1e7, 2e7, 5e7].includes(s.turnover)
         ? s.turnover
         : defaults.turnover,
@@ -57,8 +60,13 @@ export default function App() {
       /* Storage may be blocked; scanning still works. */
     }
   };
-  const cards: { result: ScanResult; signal: Signal }[] =
-    scanner.results.flatMap((result) =>
+  const cards: { result: ScanResult; signal: Signal }[] = scanner.results
+    .filter(
+      (result) =>
+        settings.marketScope === 'ALL' ||
+        result.market.assetClass === settings.marketScope,
+    )
+    .flatMap((result) =>
       visibleSignals(result.signals, settings, result.candles.length - 1).map(
         (signal) => ({ result, signal }),
       ),
@@ -142,7 +150,8 @@ export default function App() {
           </details>
         )}
         {started &&
-          (scanSettings.gapATR !== settings.gapATR ||
+          (scanSettings.marketScope !== settings.marketScope ||
+            scanSettings.gapATR !== settings.gapATR ||
             scanSettings.bodyATR !== settings.bodyATR ||
             scanSettings.trendFilter !== settings.trendFilter ||
             scanSettings.turnover !== settings.turnover ||

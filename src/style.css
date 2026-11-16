@@ -722,3 +722,49 @@ footer p {
     font-size: 11px;
   }
 }
+.market-scope {
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.scope-label {
+  display: block;
+  color: #a9bac2;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.scope-choices {
+  display: flex;
+  gap: 8px;
+}
+.scope-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  border: 1px solid #34454f;
+  border-radius: 6px;
+  padding: 12px;
+  color: #a9bac2;
+  font-size: 13px;
+  cursor: pointer;
+}
+.scope-choice.selected {
+  color: var(--green);
+  border-color: #627749;
+  background: #26352c;
+}
+.scope-choice input {
+  margin: 0;
+  accent-color: var(--green);
+  width: 14px;
+  height: 14px;
+}
+.market-scope p {
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+fieldset:disabled .scope-choice {
+  cursor: wait;
+}

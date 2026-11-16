@@ -138,3 +138,91 @@ test('desktop initial layout has no overflow', async ({ page }) => {
   ).toBe(true);
   await page.screenshot({ path: 'test-results/desktop.png', fullPage: true });
 });
+
+for (const [scope, expected] of [
+  ['코인만', 1],
+  ['주식만', 2],
+  ['전체', 3],
+] as const) {
+  test(`market scope ${scope} searches only the selected instruments and persists choice`, async ({
+    page,
+  }) => {
+    const requested: string[] = [];
+    await page.route('https://api.bybit.com/**', async (route) => {
+      const url = new URL(route.request().url());
+      let result: unknown;
+      const items = [
+        ['TESTUSDT', ''],
+        ['AAPLUSDT', 'stock'],
+        ['SPYUSDT', 'ETF'],
+        ['GOLDUSDT', 'commodity'],
+        ['EURUSDT', 'forex'],
+      ];
+      if (url.pathname.endsWith('instruments-info'))
+        result = {
+          list: items.map(([symbol, symbolType]) => ({
+            symbol,
+            symbolType,
+            quoteCoin: 'USDT',
+            settleCoin: 'USDT',
+            contractType: 'LinearPerpetual',
+            status: 'Trading',
+          })),
+        };
+      else if (url.pathname.endsWith('tickers'))
+        result = {
+          list: items.map(([symbol]) => ({ symbol, turnover24h: '25000000' })),
+        };
+      else {
+        requested.push(url.searchParams.get('symbol')!);
+        result = {
+          list:
+            url.searchParams.get('interval') === '15'
+              ? rows()
+              : Array.from({ length: 400 }, (_, i) =>
+                  [
+                    Math.floor(now / 14_400_000) * 14_400_000 -
+                      (i + 1) * 14_400_000,
+                    100,
+                    101,
+                    99,
+                    100,
+                    100,
+                  ].map(String),
+                ),
+        };
+      }
+      await route.fulfill({
+        json: { retCode: 0, retMsg: 'OK', time: now + 1000, result },
+      });
+    });
+    await page.goto('/');
+    await expect(
+      page.getByRole('radio', { name: '코인만', exact: true }),
+    ).toBeChecked();
+    await page.getByRole('radio', { name: scope, exact: true }).check();
+    await page.getByLabel('4h 추세 필터').uncheck();
+    if (scope === '주식만')
+      await expect(page.getByLabel('ETH 포함')).toBeDisabled();
+    await page.getByRole('button', { name: '전체 시장 검색' }).click();
+    await expect(page.locator('.progress')).toContainText('검색 완료');
+    await expect(page.locator('.result-card')).toHaveCount(expected);
+    const symbols = [...new Set(requested)].sort();
+    expect(symbols).toEqual(
+      scope === '코인만'
+        ? ['TESTUSDT']
+        : scope === '주식만'
+          ? ['AAPLUSDT', 'SPYUSDT']
+          : ['AAPLUSDT', 'SPYUSDT', 'TESTUSDT'],
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.reload();
+    await expect(
+      page.getByRole('radio', { name: scope, exact: true }),
+    ).toBeChecked();
+  });
+}

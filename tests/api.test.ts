@@ -136,3 +136,57 @@ it('rejects repeated pagination cursors instead of silently omitting remaining i
   );
   await expect(instruments()).rejects.toThrow('커서 반복');
 });
+
+it.each([
+  ['COIN', ['SOLUSDT', 'NEWUSDT']],
+  ['STOCK', ['AAPLUSDT', 'SPYUSDT']],
+  ['ALL', ['SOLUSDT', 'NEWUSDT', 'AAPLUSDT', 'SPYUSDT']],
+] as const)(
+  'selects %s using official instrument metadata, excluding forex, commodities and unknown types',
+  async (scope, expected) => {
+    const pairs = [
+      ['SOLUSDT', ''],
+      ['NEWUSDT', 'innovation'],
+      ['AAPLUSDT', 'stock'],
+      ['SPYUSDT', 'ETF'],
+      ['XAUUSDT', 'commodity'],
+      ['EURUSDT', 'forex'],
+      ['FUTUREUSDT', 'unknown'],
+      ['SMALLUSDT', 'stock'],
+    ];
+    const list = pairs.map(([symbol, symbolType]) => ({
+      symbol,
+      symbolType,
+      quoteCoin: 'USDT',
+      settleCoin: 'USDT',
+      contractType: 'LinearPerpetual',
+      status: 'Trading',
+    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        response(
+          url.includes('instruments')
+            ? { list }
+            : {
+                list: list.map((x) => ({
+                  symbol: x.symbol,
+                  turnover24h: x.symbol === 'SMALLUSDT' ? '1000' : '20000000',
+                })),
+              },
+        ),
+      ),
+    );
+    const found = await markets(1e7, true, undefined, scope);
+    expect(found.map((x) => x.symbol)).toEqual(expected);
+    expect(
+      found.every(
+        (x) =>
+          x.assetClass ===
+          (x.symbol === 'AAPLUSDT' || x.symbol === 'SPYUSDT'
+            ? 'STOCK'
+            : 'COIN'),
+      ),
+    ).toBe(true);
+  },
+);

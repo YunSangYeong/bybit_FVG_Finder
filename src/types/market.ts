@@ -1,3 +1,5 @@
+export type AssetClass = 'COIN' | 'STOCK';
+export type MarketScope = AssetClass | 'ALL';
 export interface Candle {
   time: number;
   open: number;
@@ -12,8 +14,10 @@ export interface Instrument {
   settleCoin: string;
   contractType: string;
   status: string;
+  symbolType?: string;
 }
 export interface Market {
+  assetClass: AssetClass;
   symbol: string;
   turnover: number;
 }

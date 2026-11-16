@@ -3,7 +3,9 @@ import {
   type Candle,
   type Instrument,
   type Market,
+  type MarketScope,
 } from '../types/market';
+import { classifyMarket } from '../utils/marketScope';
 const BASE = 'https://api.bybit.com';
 export class ApiError extends Error {
   constructor(
@@ -132,6 +134,7 @@ export async function markets(
   turnover: number,
   includeETH: boolean,
   signal?: AbortSignal,
+  scope: MarketScope = 'COIN',
 ): Promise<Market[]> {
   const [all, tickers] = await Promise.all([
     instruments(signal),
@@ -143,27 +146,31 @@ export async function markets(
   ]);
   if (!Array.isArray(tickers.result.list))
     throw new ApiError('거래대금 목록 형식 오류');
-  const eligible = new Set(
-    all
-      .filter(
-        (x) =>
-          x.quoteCoin === 'USDT' &&
-          x.settleCoin === 'USDT' &&
-          x.contractType === 'LinearPerpetual' &&
-          x.status === 'Trading' &&
-          x.symbol !== 'BTCUSDT' &&
-          (includeETH || x.symbol !== 'ETHUSDT'),
+  const eligible = new Map(
+    all.flatMap((x) => {
+      const assetClass = classifyMarket(x.symbolType);
+      if (
+        !assetClass ||
+        (scope !== 'ALL' && scope !== assetClass) ||
+        x.quoteCoin !== 'USDT' ||
+        x.settleCoin !== 'USDT' ||
+        x.contractType !== 'LinearPerpetual' ||
+        x.status !== 'Trading' ||
+        x.symbol === 'BTCUSDT' ||
+        (!includeETH && x.symbol === 'ETHUSDT')
       )
-      .map((x) => x.symbol),
+        return [];
+      return [[x.symbol, assetClass] as const];
+    }),
   );
   return tickers.result.list
-    .map((x) => ({ symbol: x.symbol, turnover: Number(x.turnover24h) }))
-    .filter(
-      (x) =>
-        eligible.has(x.symbol) &&
-        Number.isFinite(x.turnover) &&
-        x.turnover >= turnover,
-    )
+    .flatMap((x) => {
+      const assetClass = eligible.get(x.symbol),
+        amount = Number(x.turnover24h);
+      return assetClass && Number.isFinite(amount) && amount >= turnover
+        ? [{ symbol: x.symbol, turnover: amount, assetClass }]
+        : [];
+    })
     .sort((a, b) => b.turnover - a.turnover);
 }
 export function parseCandles(rows: unknown, interval: number, now: number) {

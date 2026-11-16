@@ -37,6 +37,7 @@ export function useScanner() {
         settings.turnover,
         settings.includeETH,
         controller.signal,
+        settings.marketScope,
       );
       setProgress((p) => ({ ...p, total: targets.length }));
       let cursor = 0;

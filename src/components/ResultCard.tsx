@@ -56,6 +56,7 @@ export function ResultCard({
             </span>
           </div>
           <p className="small muted">
+            {result.market.assetClass === 'STOCK' ? '주식·ETF' : '코인'} ·
             {kst(event.time + 900_000)} KST · {age}봉 전 · 15분봉
           </p>
         </div>

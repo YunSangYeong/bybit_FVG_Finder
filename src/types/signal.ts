@@ -1,4 +1,4 @@
-import type { Candle } from './market';
+import type { Candle, Market, MarketScope } from './market';
 export type Direction = 'LONG' | 'SHORT';
 export type Status = 'WAIT' | 'TOUCH' | 'READY' | 'INVALID';
 export interface Event {
@@ -54,11 +54,12 @@ export interface Signal {
   trade?: Trade;
 }
 export interface ScanResult {
-  market: { symbol: string; turnover: number };
+  market: Market;
   candles: Candle[];
   signals: Signal[];
 }
 export interface Settings {
+  marketScope: MarketScope;
   turnover: number;
   includeETH: boolean;
   direction: 'ALL' | Direction;
@@ -72,6 +73,7 @@ export interface Settings {
   riskPercent: number;
 }
 export const defaults: Settings = {
+  marketScope: 'COIN',
   turnover: 10_000_000,
   includeETH: true,
   direction: 'ALL',
